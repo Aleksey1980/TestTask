@@ -1,0 +1,16 @@
+HKCR
+{
+	NoRemove CLSID
+	{
+		ForceRemove {1965aba7-c4d8-44c9-ad1f-f11c7a398f93} = s 'ServiceEnum class'
+		{
+			ForceRemove Programmable
+			InprocServer32 = s '%MODULE%'
+			{
+				val ThreadingModel = s 'Apartment'
+			}
+			TypeLib = s '{fb0e622a-1061-461a-8b82-fa6036a1de65}'
+			Version = s '1.0'
+		}
+	}
+}

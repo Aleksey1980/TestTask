@@ -1,0 +1,111 @@
+﻿// SCManager.idl: источник языка IDL для SCManager
+//
+
+// Этот файл будет обработан средством MIDL для
+// создание библиотеки типов ($handlersafeidlname$.tlb) и кода маршалирования.
+
+import "oaidl.idl";
+import "ocidl.idl";
+
+[
+	uuid(fb0e622a-1061-461a-8b82-fa6036a1de65),
+	version(1.0),
+]
+library SCManagerLib
+{
+	importlib("stdole2.tlb");
+
+	[
+		uuid(F377F7F8-324C-4956-850B-F8BA3E1F0F9D)
+	]
+	enum ServiceType
+	{
+		KernelDriver = 1,
+		FileSystemDrive = 2,
+		Win32OwnProcess = 0x10,
+		Win32ShareProcess = 0x20
+	};
+
+	[
+		uuid(FF975FF5-4A10-4573-90A0-F0FB4542515C)
+	]
+	enum ServiceState
+	{
+		ContinuePending = 0x00000005,	// The service is about to continue.
+		PausePending = 0x00000006,		// The service is pausing.
+		Paused = 0x00000007,			// The service is paused.
+		Running = 0x00000004,			// The service is running.
+		StartPending = 0x00000002,		// The service is starting.
+		StopPending = 0x00000003,		// The service is stopping.
+		Stopped = 0x00000001			// The service has stopped.
+	};
+
+	[
+		uuid(8C2EA04C-50C0-445F-A7C7-B568468411FA)
+	]
+	enum ServiceStartType
+	{
+		Automatic = 0x00000002,			// A service started automatically by the service control manager during system startup.
+		Boot = 0x00000000,				// A device driver started by the system loader.This value is valid only for driver services.
+		Demand = 0x00000003,			// A service started by the service control manager when a process calls the StartService function.
+		Disabled = 0x00000004,			// A service that cannot be started.Attempts to start the service result in the error code ERROR_SERVICE_DISABLED.
+		System = 0x00000001				// A device driver started by the IoInitSystem function.This value is valid only for driver services.
+	};
+
+	[
+		uuid(6AFD0DAB-8F44-4CB1-9345-28EF8D8C5F76)
+	]
+	interface IServiceNotify : IUnknown
+	{
+		HRESULT StateChanged([in]int newState);
+	};
+	
+	[
+		uuid(3FA76749-680A-4B3C-9667-4238F03FB94B)
+	]
+	interface IService : IUnknown
+	{
+		HRESULT GetConfig([out]int* pType, [out]int* pStart, [out] BSTR* ppBinaryPath, [out] BSTR* ppStartName);
+		HRESULT GetCurrentState([out] int* pState);
+		HRESULT Start();
+		HRESULT Stop();
+		HRESULT Pause();
+		HRESULT Continue();
+		HRESULT SetNotifyObject([in] IServiceNotify* pNotify);
+	};
+
+	[
+		uuid(887BDF0A-ED76-4014-9DAC-5890F41FF7A2)
+	]
+	interface IEnumService : IUnknown
+	{
+		HRESULT Clone([out]IEnumService** ppenum);
+		HRESULT Next([out]BSTR* pName, [out]BSTR* pDisplayName);
+		HRESULT Reset();
+		HRESULT Skip(int celt);
+	};
+
+	[
+		object,
+		uuid(408e8eff-5331-4eaa-955c-af5974a61929),
+		pointer_default(unique)
+	]
+	interface IServiceControlManager : IUnknown
+	{
+		HRESULT Connect(const BSTR serverName);
+		HRESULT Disconnect();
+		HRESULT GetServices([out]IEnumService** svcEnum);
+		HRESULT GetService(const BSTR srvcName, [out] IService** pService);
+	};
+
+	[
+		uuid(472ca3cc-c5a8-4b31-8a55-1cb2a85aa5ca)
+	]	
+	coclass CoServiceControlManager
+	{
+		[default] interface IServiceControlManager;
+	};
+};
+
+import "shobjidl.idl";
+import "shobjidl.idl";

@@ -1,0 +1,25 @@
+HKCR
+{
+	SCManager.Manager.1 = s 'ServiceControlManager class'
+	{
+		CLSID = s '{472ca3cc-c5a8-4b31-8a55-1cb2a85aa5ca}'
+	}
+	SCManager.Manager = s 'ServiceControlManager class'
+	{		
+		CurVer = s 'SCManager.Manager.1'
+	}
+	NoRemove CLSID
+	{
+		ForceRemove {472ca3cc-c5a8-4b31-8a55-1cb2a85aa5ca} = s 'ServiceControlManager class'
+		{
+			ProgID = s 'SCManager.Manager.1'
+			VersionIndependentProgID = s 'SCManager.Manager'
+			InprocServer32 = s '%MODULE%'
+			{
+				val ThreadingModel = s 'Apartment'
+			}
+			TypeLib = s '{fb0e622a-1061-461a-8b82-fa6036a1de65}'
+			Version = s '1.0'
+		}
+	}
+}
