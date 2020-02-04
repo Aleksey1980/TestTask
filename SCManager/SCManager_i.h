@@ -125,6 +125,22 @@ enum  DECLSPEC_UUID("8C2EA04C-50C0-445F-A7C7-B568468411FA") ServiceStartType
         Disabled	= 0x4,
         System	= 0x1
     } ;
+/* [uuid] */ 
+enum  DECLSPEC_UUID("85C2BE6F-CFC6-41E6-A2BC-C46610A9C335") ServiceAcceptingControl
+    {
+        Stop	= 0x1,
+        PauseContinue	= 0x2,
+        Shutdown	= 0x4,
+        ParamChange	= 0x8,
+        NetBindChange	= 0x10,
+        HardwareProfileChange	= 0x20,
+        PowerEvent	= 0x40,
+        SessionChange	= 0x80,
+        PreShutdown	= 0x100,
+        TimeChange	= 0x200,
+        TriggerEvent	= 0x400,
+        UserLogoff	= 0x800
+    } ;
 
 EXTERN_C const IID LIBID_SCManagerLib;
 
@@ -144,7 +160,8 @@ EXTERN_C const IID IID_IServiceNotify;
     {
     public:
         virtual HRESULT STDMETHODCALLTYPE StateChanged( 
-            /* [in] */ int newState) = 0;
+            /* [in] */ long newState,
+            /* [in] */ long acceptControl) = 0;
         
     };
     
@@ -169,7 +186,8 @@ EXTERN_C const IID IID_IServiceNotify;
         
         HRESULT ( STDMETHODCALLTYPE *StateChanged )( 
             IServiceNotify * This,
-            /* [in] */ int newState);
+            /* [in] */ long newState,
+            /* [in] */ long acceptControl);
         
         END_INTERFACE
     } IServiceNotifyVtbl;
@@ -194,8 +212,8 @@ EXTERN_C const IID IID_IServiceNotify;
     ( (This)->lpVtbl -> Release(This) ) 
 
 
-#define IServiceNotify_StateChanged(This,newState)	\
-    ( (This)->lpVtbl -> StateChanged(This,newState) ) 
+#define IServiceNotify_StateChanged(This,newState,acceptControl)	\
+    ( (This)->lpVtbl -> StateChanged(This,newState,acceptControl) ) 
 
 #endif /* COBJMACROS */
 
@@ -224,13 +242,14 @@ EXTERN_C const IID IID_IService;
     {
     public:
         virtual HRESULT STDMETHODCALLTYPE GetConfig( 
-            /* [out] */ int *pType,
-            /* [out] */ int *pStart,
+            /* [out] */ long *pType,
+            /* [out] */ long *pStart,
             /* [out] */ BSTR *ppBinaryPath,
             /* [out] */ BSTR *ppStartName) = 0;
         
         virtual HRESULT STDMETHODCALLTYPE GetCurrentState( 
-            /* [out] */ int *pState) = 0;
+            /* [out] */ long *pState,
+            /* [out] */ long *pAcceptControl) = 0;
         
         virtual HRESULT STDMETHODCALLTYPE Start( void) = 0;
         
@@ -266,14 +285,15 @@ EXTERN_C const IID IID_IService;
         
         HRESULT ( STDMETHODCALLTYPE *GetConfig )( 
             IService * This,
-            /* [out] */ int *pType,
-            /* [out] */ int *pStart,
+            /* [out] */ long *pType,
+            /* [out] */ long *pStart,
             /* [out] */ BSTR *ppBinaryPath,
             /* [out] */ BSTR *ppStartName);
         
         HRESULT ( STDMETHODCALLTYPE *GetCurrentState )( 
             IService * This,
-            /* [out] */ int *pState);
+            /* [out] */ long *pState,
+            /* [out] */ long *pAcceptControl);
         
         HRESULT ( STDMETHODCALLTYPE *Start )( 
             IService * This);
@@ -317,8 +337,8 @@ EXTERN_C const IID IID_IService;
 #define IService_GetConfig(This,pType,pStart,ppBinaryPath,ppStartName)	\
     ( (This)->lpVtbl -> GetConfig(This,pType,pStart,ppBinaryPath,ppStartName) ) 
 
-#define IService_GetCurrentState(This,pState)	\
-    ( (This)->lpVtbl -> GetCurrentState(This,pState) ) 
+#define IService_GetCurrentState(This,pState,pAcceptControl)	\
+    ( (This)->lpVtbl -> GetCurrentState(This,pState,pAcceptControl) ) 
 
 #define IService_Start(This)	\
     ( (This)->lpVtbl -> Start(This) ) 

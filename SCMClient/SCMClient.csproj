@@ -80,6 +80,9 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <WCFMetadata Include="Connected Services\" />
+  </ItemGroup>
+  <ItemGroup>
     <COMReference Include="SCManagerLib">
       <Guid>{FB0E622A-1061-461A-8B82-FA6036A1DE65}</Guid>
       <VersionMajor>1</VersionMajor>

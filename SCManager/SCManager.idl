@@ -53,11 +53,30 @@ library SCManagerLib
 	};
 
 	[
+		uuid(85C2BE6F-CFC6-41E6-A2BC-C46610A9C335)
+	]
+	enum ServiceAcceptingControl
+	{
+		Stop = 0x00000001,
+		PauseContinue = 0x00000002,
+		Shutdown = 0x00000004,
+		ParamChange = 0x00000008,
+		NetBindChange = 0x00000010,
+		HardwareProfileChange = 0x00000020,
+		PowerEvent = 0x00000040,
+		SessionChange = 0x00000080,
+		PreShutdown = 0x00000100,
+		TimeChange = 0x00000200,
+		TriggerEvent = 0x00000400,
+		UserLogoff = 0x00000800
+	};
+
+	[
 		uuid(6AFD0DAB-8F44-4CB1-9345-28EF8D8C5F76)
 	]
 	interface IServiceNotify : IUnknown
 	{
-		HRESULT StateChanged([in]int newState);
+		HRESULT StateChanged([in]long newState, [in]long acceptControl);
 	};
 	
 	[
@@ -65,8 +84,8 @@ library SCManagerLib
 	]
 	interface IService : IUnknown
 	{
-		HRESULT GetConfig([out]int* pType, [out]int* pStart, [out] BSTR* ppBinaryPath, [out] BSTR* ppStartName);
-		HRESULT GetCurrentState([out] int* pState);
+		HRESULT GetConfig([out]long* pType, [out]long* pStart, [out] BSTR* ppBinaryPath, [out] BSTR* ppStartName);
+		HRESULT GetCurrentState([out] long* pState, [out] long* pAcceptControl);
 		HRESULT Start();
 		HRESULT Stop();
 		HRESULT Pause();

@@ -58,8 +58,9 @@ void CService::NotifyServiceStatus(PSERVICE_NOTIFY pNotify)
 		if (m_status.dwCurrentState != pNotify->ServiceStatus.dwCurrentState)
 		{			
 			m_status.dwCurrentState = pNotify->ServiceStatus.dwCurrentState;
+			m_status.dwControlsAccepted = pNotify->ServiceStatus.dwControlsAccepted;
 			if (m_notifyObject)
-				m_notifyObject->StateChanged(pNotify->ServiceStatus.dwCurrentState);
+				m_notifyObject->StateChanged(pNotify->ServiceStatus.dwCurrentState, pNotify->ServiceStatus.dwControlsAccepted);
 		}
 	}
 	__finally
@@ -75,25 +76,35 @@ CService::CService(CServiceControlManager* pMgr, CComBSTR& name) :
 	m_notifyObject(nullptr),
 	m_thread(NULL),
 	m_callback(NULL),
-	m_finish(NULL)
+	m_finish(NULL),
+	m_result(S_OK)
 {
-	if (m_manager->IsConnected())
+	if (!m_manager->IsConnected())
 	{
-		m_service = OpenService(
-			m_manager->m_scm,
-			name.m_str,
-			SERVICE_ALL_ACCESS
-		);
-		if (IsValid())
-		{
-			SERVICE_STATUS_PROCESS sp;
-			DWORD bytesNeeded;
-			if (QueryServiceStatusEx(m_service, SC_STATUS_PROCESS_INFO, (LPBYTE)&sp, sizeof(sp), &bytesNeeded))
-				m_status.dwCurrentState = sp.dwCurrentState;
-			m_callback.Attach(CreateEvent(nullptr, TRUE, FALSE, nullptr));
-			m_finish.Attach(CreateEvent(nullptr, FALSE, FALSE, nullptr));
-		}
+		m_result = AtlHresultFromWin32(ERROR_INVALID_HANDLE);
+		return;
 	}
+	m_service = OpenService(
+		m_manager->m_scm,
+		name.m_str,
+		SERVICE_QUERY_CONFIG | SERVICE_QUERY_STATUS | SERVICE_ENUMERATE_DEPENDENTS | SERVICE_START | SERVICE_STOP | SERVICE_PAUSE_CONTINUE
+		);
+	if (!IsValid())
+	{
+		m_result = AtlHresultFromLastError();
+		return;
+	}
+	SERVICE_STATUS_PROCESS sp;
+	DWORD bytesNeeded;
+	if (!QueryServiceStatusEx(m_service, SC_STATUS_PROCESS_INFO, (LPBYTE)&sp, sizeof(sp), &bytesNeeded))
+	{
+		m_result = AtlHresultFromLastError();
+		return;
+	}
+	m_status.dwCurrentState = sp.dwCurrentState;
+	m_status.dwControlsAccepted = sp.dwControlsAccepted;
+	m_callback.Attach(CreateEvent(nullptr, TRUE, FALSE, nullptr));
+	m_finish.Attach(CreateEvent(nullptr, FALSE, FALSE, nullptr));
 }
 
 CService::~CService()
@@ -103,7 +114,7 @@ CService::~CService()
 		CloseServiceHandle(m_service);
 }
 
-STDMETHODIMP CService::GetConfig(int* pType, int* pStart, BSTR* ppBinaryPath, BSTR* ppStartName)
+STDMETHODIMP CService::GetConfig(long* pType, long* pStart, BSTR* ppBinaryPath, BSTR* ppStartName)
 {
 	if (!IsValid())
 		return AtlHresultFromWin32(ERROR_INVALID_HANDLE);
@@ -129,7 +140,7 @@ STDMETHODIMP CService::GetConfig(int* pType, int* pStart, BSTR* ppBinaryPath, BS
 }
 
 
-STDMETHODIMP CService::GetCurrentState(int* pState)
+STDMETHODIMP CService::GetCurrentState(long* pState, long* pAcceptControl)
 {
 	if (!IsValid())
 		return AtlHresultFromWin32(ERROR_INVALID_HANDLE);
@@ -140,8 +151,10 @@ STDMETHODIMP CService::GetCurrentState(int* pState)
 		if (!QueryServiceStatusEx(m_service, SC_STATUS_PROCESS_INFO, (LPBYTE)&sp, sizeof(sp), &bytesNeeded))
 			return AtlHresultFromLastError();
 		m_status.dwCurrentState = sp.dwCurrentState;
+		m_status.dwControlsAccepted = sp.dwControlsAccepted;
 	}
 	*pState = m_status.dwCurrentState;
+	*pAcceptControl = m_status.dwControlsAccepted;
 	return S_OK;
 }
 

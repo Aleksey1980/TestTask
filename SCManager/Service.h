@@ -15,6 +15,7 @@ class CService :
 private:
 	CServiceControlManager* m_manager;
 	SC_HANDLE m_service;
+	HRESULT m_result;
 	SERVICE_STATUS m_status;
 	CComPtr<IServiceNotify> m_notifyObject;
 	CHandle m_thread;
@@ -30,9 +31,10 @@ public:
 	~CService();
 
 	inline bool IsValid() const { return NULL != m_service; }
+	inline HRESULT lastResult() const { return m_result; }
 
-	STDMETHOD(GetConfig(int* pType, int* pStart, BSTR* ppBinaryPth, BSTR* ppStartName));
-	STDMETHOD(GetCurrentState(int* pState));
+	STDMETHOD(GetConfig(long* pType, long* pStart, BSTR* ppBinaryPth, BSTR* ppStartName));
+	STDMETHOD(GetCurrentState(long* pState, long* pAcceptControl));
 	STDMETHOD(Start());
 	STDMETHOD(Stop());
 	STDMETHOD(Pause());

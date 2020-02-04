@@ -46,9 +46,10 @@ STDMETHODIMP CServiceControlManager::GetService(const BSTR srvcName, IService** 
 	CService* pSrvc = new CService(this, CComBSTR(srvcName));
 	if (!pSrvc->IsValid())
 	{
+		HRESULT hr = pSrvc->lastResult();
 		delete pSrvc;
 		*pService = nullptr;
-		return E_FAIL;
+		return hr;
 	}
 	return pSrvc->QueryInterface(__uuidof(IService), reinterpret_cast<void**>(pService));
 }

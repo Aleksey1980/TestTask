@@ -12,20 +12,30 @@ using SCManagerLib;
 
 namespace SCMClient
 {
-    public partial class Form1 : Form
+    public partial class MainForm : Form
     {
         class ServiceNotifier : IServiceNotify
         {
-            void IServiceNotify.StateChanged(int newState)
+            void IServiceNotify.StateChanged(int newState, int acceptControl)
             {
-                Owner.Invoke(new Action(()=>Owner.UpdateServiceControls()));
+                Owner.Invoke(new Action<ServiceState, ServiceAcceptingControl>(
+                    delegate (ServiceState state, ServiceAcceptingControl control)
+                    {
+                        Owner.BtnStart.Enabled = state == ServiceState.Stopped;
+                        Owner.BtnStop.Enabled = state == ServiceState.Running;
+                        Owner.BtnPause.Enabled = state == ServiceState.Running && (control & ServiceAcceptingControl.PauseContinue) == ServiceAcceptingControl.PauseContinue;
+                        Owner.BtnContinue.Enabled = state == ServiceState.Paused && (control & ServiceAcceptingControl.PauseContinue) == ServiceAcceptingControl.PauseContinue;
+                        Owner.LblCurrentState.Text = $"Current state: {state}";
+                    }),
+                    (ServiceState)newState, (ServiceAcceptingControl)acceptControl
+                    );
             }
 
-            public ServiceNotifier(Form1 owner)
+            public ServiceNotifier(MainForm owner)
             {
                 Owner = owner;
             }
-            public Form1 Owner { get; }
+            public MainForm Owner { get; }
         }
 
         class ServiceItem
@@ -45,7 +55,7 @@ namespace SCMClient
         private ServiceNotifier m_notifier;
         private IService m_service = null;
 
-        public Form1()
+        public MainForm()
         {
             InitializeComponent();
             m_notifier = new ServiceNotifier(this);
@@ -62,19 +72,24 @@ namespace SCMClient
             BtnDisconnect.Enabled = m_connected;
         }
 
-        public void UpdateServiceControls()
+        private void UpdateServiceControls()
         {
             if (m_service == null)
             {
                 BtnStart.Enabled = false;
                 BtnStop.Enabled = false;
+                BtnPause.Enabled = false;
+                BtnContinue.Enabled = false;
             }
             else
             {
-                m_service.GetCurrentState(out int st);
+                m_service.GetCurrentState(out int st, out int ctrl);
+                ServiceAcceptingControl acceptControl = (ServiceAcceptingControl)ctrl;
                 ServiceState state = (ServiceState)st;
                 BtnStart.Enabled = state == ServiceState.Stopped;
                 BtnStop.Enabled = state == ServiceState.Running;
+                BtnPause.Enabled = state == ServiceState.Running && (acceptControl & ServiceAcceptingControl.PauseContinue) == ServiceAcceptingControl.PauseContinue;
+                BtnContinue.Enabled = state == ServiceState.Paused && (acceptControl & ServiceAcceptingControl.PauseContinue) == ServiceAcceptingControl.PauseContinue;
             }
         }
 
@@ -86,16 +101,20 @@ namespace SCMClient
                 LblStartType.Text = "Service start type: none";
                 LblBinaryPath.Text = "Binary image path: none";
                 LblStartName.Text = "Service start name: none";
+                LblCurrentState.Text = "Current state: none";
             }
             else
             {
                 m_service.GetConfig(out int pt, out int ps, out string binPath, out string startName);
+                m_service.GetCurrentState(out int iState, out int iCtrl);
                 ServiceType servcType = (ServiceType)pt;
                 ServiceStartType startType = (ServiceStartType)ps;
+                ServiceState state = (ServiceState)iState;
                 LblServiceType.Text = $"Service type: {servcType}";
                 LblStartType.Text = $"Service start type: {startType}";
                 LblBinaryPath.Text = $"Binary image path: {binPath}";
                 LblStartName.Text = $"Service start name: {startName}";
+                LblCurrentState.Text = $"Current state: {state}";
             }
         }
 
@@ -117,12 +136,20 @@ namespace SCMClient
             }
             catch (Exception e)
             {
-                MessageBox.Show(e.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ShowError($"Unable open service {item.ServiceName}.", e.Message);
             }
             finally
             {
                 UpdateServiceInfo();
             }
+        }
+
+        private void ShowError(string operation, string message)
+        {
+            StringBuilder builder = new StringBuilder();
+            builder.AppendLine(operation);
+            builder.Append(message);
+            MessageBox.Show(builder.ToString(), Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
         private void BtnConnect_Click(object sender, EventArgs e)
@@ -156,7 +183,7 @@ namespace SCMClient
             }
             catch (Exception exc)
             {
-                MessageBox.Show(exc.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ShowError($"Unable to connect SCM on computer {BoxCompName.Text}.", exc.Message);
             }
             finally
             {
@@ -171,7 +198,7 @@ namespace SCMClient
         {
             ServiceItem item = (ServiceItem)ListServices.SelectedItem;
             OpenSelectedService(item);
-            UpdateServiceControls();
+            UpdateServiceInfo();
             UpdateServiceControls();
         }
 
@@ -181,8 +208,14 @@ namespace SCMClient
             {
                 m_service?.Start();
             }
+
+            catch (Exception exc)
+            {
+                ShowError("Unable to start service.", exc.Message);
+            }
             finally
             {
+                UpdateServiceControls();
                 ListServices.Focus();
             }
         }
@@ -193,8 +226,47 @@ namespace SCMClient
             {
                 m_service?.Stop();
             }
+            catch (Exception exc)
+            {
+                ShowError("Unable to stop service.", exc.Message);
+            }
             finally
             {
+                UpdateServiceControls();
+                ListServices.Focus();
+            }
+        }
+
+        private void BtnPause_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                m_service.Pause();
+            }
+            catch (Exception exc)
+            {
+                ShowError("Unable to pause service.", exc.Message);
+            }
+            finally
+            {
+                UpdateServiceControls();
+                ListServices.Focus();
+            }
+        }
+
+        private void BtnContinue_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                m_service.Continue();
+            }
+            catch (Exception exc)
+            {
+                ShowError("Unable to continue service.", exc.Message);
+            }
+            finally
+            {
+                UpdateServiceControls();
                 ListServices.Focus();
             }
         }
